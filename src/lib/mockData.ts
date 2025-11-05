@@ -14,7 +14,7 @@ export interface Reservation {
   customerEmail: string;
   channel: 'hotel' | 'airbnb' | 'direct';
   partner?: string;
-  status: 'toBeQuoted' | 'toSchedule' | 'scheduled' | 'assigned' | 'onTheWay' | 'completed' | 'cancelled';
+  status: 'toBeQuoted' | 'scheduled' | 'assigned' | 'completed' | 'cancelled';
   driver?: string;
   vehicle?: string;
   quote?: number;
@@ -53,7 +53,7 @@ export const mockReservations: Reservation[] = [
     customerPhone: '+57 310 234 5678',
     customerEmail: 'maria@example.com',
     channel: 'direct',
-    status: 'toSchedule',
+    status: 'scheduled',
     quote: 150000,
     createdAt: '2025-11-01T15:30:00',
   },
