@@ -70,7 +70,8 @@ export default function ContactInfo({ data, updateData, onNext, onBack }: Contac
           value={data.name}
           onChange={(e) => updateData({ name: e.target.value })}
           placeholder="Tu nombre completo"
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+          style={{ fontSize: '16px' }}
           required
         />
       </div>
@@ -95,7 +96,8 @@ export default function ContactInfo({ data, updateData, onNext, onBack }: Contac
             updateData({ whatsapp: value });
           }}
           placeholder="+57 300 123 4567"
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+          style={{ fontSize: '16px' }}
           required
         />
         {data.whatsapp && !validateWhatsApp(data.whatsapp) && (
@@ -114,7 +116,8 @@ export default function ContactInfo({ data, updateData, onNext, onBack }: Contac
           value={data.email}
           onChange={(e) => updateData({ email: e.target.value })}
           placeholder="correo@ejemplo.com"
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+          style={{ fontSize: '16px' }}
         />
         {data.email && !validateEmail(data.email) && (
           <p className="text-xs text-red-500 mt-1">Formato de correo inválido</p>

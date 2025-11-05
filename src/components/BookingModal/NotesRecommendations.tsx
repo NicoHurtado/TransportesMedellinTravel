@@ -116,7 +116,8 @@ export default function NotesRecommendations({ data, updateData, onNext, onBack 
           onChange={(e) => updateData({ additionalNotes: e.target.value })}
           placeholder="Ej: llevo mascotas, 4 maletas grandes, silla infantil, vuelo AVIANCA 8522, etc."
           rows={4}
-          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors resize-none"
+          className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors resize-none text-base min-h-[48px]"
+          style={{ fontSize: '16px' }}
         />
         <p className="text-xs text-gray-500 mt-2">
           No hay costo adicional por mascotas, maletas o sillas infantiles.

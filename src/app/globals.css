@@ -5,10 +5,14 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    /* Prevent zoom on input focus in iOS */
+    -webkit-text-size-adjust: 100%;
   }
   
   body {
     @apply bg-white text-black antialiased;
+    /* Prevent body scroll when modal is open */
+    overflow-x: hidden;
   }
 
   * {
@@ -19,6 +23,59 @@
   textarea,
   select {
     @apply text-base;
+    /* Prevent zoom on input focus in iOS Safari */
+    font-size: 16px !important;
+  }
+
+  /* iOS date/time input styling */
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    position: relative;
+    min-height: 48px;
+    /* Ensure text is visible */
+    color: #000;
+    background-color: #fff;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator,
+  input[type="time"]::-webkit-calendar-picker-indicator,
+  input[type="datetime-local"]::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 16px;
+    width: 24px;
+    height: 24px;
+    opacity: 0.7;
+    cursor: pointer;
+    background-size: contain;
+  }
+
+  /* iOS Safari specific: make date/time inputs more visible */
+  @supports (-webkit-touch-callout: none) {
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"] {
+      padding-right: 48px;
+      /* Ensure placeholder text is visible */
+      color: #000;
+    }
+    
+    input[type="date"]:invalid,
+    input[type="time"]:invalid,
+    input[type="datetime-local"]:invalid {
+      color: #999;
+    }
+  }
+
+  /* Prevent form movement on iOS - only when modal is open */
+  @supports (-webkit-touch-callout: none) {
+    body.modal-open {
+      overflow: hidden;
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
   }
 }
 

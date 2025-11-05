@@ -320,7 +320,8 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
               }
             }}
             placeholder={t('hoursNeededPlaceholder')}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+            style={{ fontSize: '16px' }}
             required
           />
           <p className="text-xs text-gray-500 mt-1">
@@ -331,39 +332,40 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
         </div>
       ) : (
         <>
-          {/* From */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium mb-2">
-              <MapPin className="w-4 h-4" />
-              {t('from')}
-            </label>
-            <input
-              type="text"
-              value={data.from}
+      {/* From */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium mb-2">
+          <MapPin className="w-4 h-4" />
+          {t('from')}
+        </label>
+        <input
+          type="text"
+          value={data.from}
               onChange={(e) => {
                 if (!isAirportTransfer || direction !== 'from') {
                   updateData({ from: e.target.value });
                 }
               }}
               placeholder={isAirportTransfer && direction === 'from' ? t('selectAirportAbove') : t('fromPlaceholder')}
-              className={`w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors ${
+              className={`w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px] ${
                 isAirportTransfer && direction === 'from' ? 'bg-gray-50 cursor-not-allowed' : ''
               }`}
+              style={{ fontSize: '16px' }}
               required={!isCustomTransport}
               disabled={isAirportTransfer && direction === 'from'}
-            />
-            <p className="text-xs text-gray-500 mt-1">{t('tip')}</p>
-          </div>
+        />
+        <p className="text-xs text-gray-500 mt-1">{t('tip')}</p>
+      </div>
 
-          {/* To */}
-          <div>
-            <label className="flex items-center gap-2 text-sm font-medium mb-2">
-              <MapPin className="w-4 h-4" />
-              {t('to')}
-            </label>
-            <input
-              type="text"
-              value={data.to}
+      {/* To */}
+      <div>
+        <label className="flex items-center gap-2 text-sm font-medium mb-2">
+          <MapPin className="w-4 h-4" />
+          {t('to')}
+        </label>
+        <input
+          type="text"
+          value={data.to}
               onChange={(e) => {
                 if (!isAirportTransfer && !isTour) {
                   if (direction !== 'to') {
@@ -372,14 +374,15 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
                 }
               }}
               placeholder={isAirportTransfer && direction === 'to' ? t('selectAirportAbove') : t('toPlaceholder')}
-              className={`w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors ${
+              className={`w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px] ${
                 (isAirportTransfer && direction === 'to') || isTour ? 'bg-gray-50 cursor-not-allowed' : ''
               }`}
+              style={{ fontSize: '16px' }}
               required={!isCustomTransport}
               disabled={(isAirportTransfer && direction === 'to') || isTour}
-            />
-            <p className="text-xs text-gray-500 mt-1">{t('tip')}</p>
-          </div>
+        />
+        <p className="text-xs text-gray-500 mt-1">{t('tip')}</p>
+      </div>
         </>
       )}
 
@@ -395,7 +398,8 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
             value={data.flightNumber}
             onChange={(e) => updateData({ flightNumber: e.target.value.toUpperCase() })}
             placeholder={t('flightNumberPlaceholder')}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+            style={{ fontSize: '16px' }}
           />
         </div>
       )}
@@ -411,7 +415,8 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
             type="date"
             value={data.date}
             onChange={(e) => updateData({ date: e.target.value })}
-            className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
+            className="w-full px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+            style={{ fontSize: '16px' }}
             required
           />
         </div>
@@ -422,8 +427,8 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
           </label>
           <div className="flex gap-2">
             {/* Mobile: Time picker (native) */}
-            <input
-              type="time"
+          <input
+            type="time"
               value={data.time ? convert12to24(
                 parseInt(data.time.split(':')[0]) || 12,
                 parseInt(data.time.split(':')[1]) || 0,
@@ -431,24 +436,26 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
               ) : ''}
               onChange={handleTimeChange}
               placeholder="12:30"
-              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors md:hidden"
+              className="flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors md:hidden text-base min-h-[48px]"
+              style={{ fontSize: '16px' }}
               required
             />
             {/* Desktop: Manual input (1-12 format) */}
             <input
               type="text"
-              value={data.time}
+            value={data.time}
               onChange={handleTimeInput}
               placeholder="12:30"
               pattern="^(1[0-2]|[1-9]):[0-5][0-9]$"
-              className="hidden md:flex flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors"
-              required
-            />
+              className="hidden md:flex flex-1 px-4 py-3 border-2 border-gray-200 rounded-2xl focus:border-black transition-colors text-base min-h-[48px]"
+              style={{ fontSize: '16px' }}
+            required
+          />
             <div className="flex gap-1">
               <button
                 type="button"
                 onClick={() => updateData({ timePeriod: 'AM' })}
-                className={`px-3 sm:px-4 py-3 rounded-2xl font-medium transition-colors min-h-[48px] ${
+                className={`px-3 sm:px-4 py-3 rounded-2xl font-medium transition-colors min-h-[48px] flex-shrink-0 ${
                   data.timePeriod === 'AM'
                     ? 'bg-black text-white'
                     : 'bg-white border-2 border-gray-200 hover:border-black'
@@ -459,7 +466,7 @@ export default function TripDetails({ data, updateData, onNext, serviceId }: Tri
               <button
                 type="button"
                 onClick={() => updateData({ timePeriod: 'PM' })}
-                className={`px-3 sm:px-4 py-3 rounded-2xl font-medium transition-colors min-h-[48px] ${
+                className={`px-3 sm:px-4 py-3 rounded-2xl font-medium transition-colors min-h-[48px] flex-shrink-0 ${
                   data.timePeriod === 'PM'
                     ? 'bg-black text-white'
                     : 'bg-white border-2 border-gray-200 hover:border-black'
