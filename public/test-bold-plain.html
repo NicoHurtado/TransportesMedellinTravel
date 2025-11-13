@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Bold mínimo</title>
+  <!-- Cargar el script de Bold PRIMERO en el head -->
+  <script src="https://checkout.bold.co/library/boldPaymentButton.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 800px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+    }
+    .test-section {
+      margin: 30px 0;
+      padding: 20px;
+      background: #f9f9f9;
+      border-radius: 5px;
+      min-height: 100px;
+      border: 2px dashed #ccc;
+    }
+    .test-section h2 {
+      margin-top: 0;
+      color: #666;
+    }
+    .status {
+      margin-top: 10px;
+      padding: 10px;
+      background: #fff;
+      border-radius: 5px;
+      font-size: 12px;
+      color: #666;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Test Bold mínimo (HTML puro)</h1>
+    <p>Esta página prueba el botón de Bold sin React ni Next.js para aislar problemas.</p>
+    
+    <div class="test-section">
+      <h2>Test 1: Botón sin monto (solo API key)</h2>
+      <p style="font-size: 12px; color: #666;">Este botón NO requiere hash ni amount. Si no aparece, el problema está en la API key.</p>
+      <form id="form-test-1">
+        <script
+          data-bold-button="dark-L"
+          data-api-key="wG2AmWrzIi6mzcbuEsknPLmXQNdRyDQVhCmnW8xRxCU"
+          data-description="Prueba sin monto definido"
+          data-redirection-url="http://localhost:3000/payment-result"
+        ></script>
+      </form>
+      <div class="status" id="status-1">Esperando que aparezca el botón...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Test 2: Botón con monto (requiere hash)</h2>
+      <p style="color: #999; font-size: 14px;">Este botón requiere hash, así que probablemente mostrará error BTN-001 si no tiene hash válido.</p>
+      <form id="form-test-2">
+        <script
+          data-bold-button="dark-L"
+          data-api-key="wG2AmWrzIi6mzcbuEsknPLmXQNdRyDQVhCmnW8xRxCU"
+          data-order-id="TEST-HTML-123456"
+          data-amount="400001"
+          data-currency="COP"
+          data-description="Prueba HTML con monto"
+          data-redirection-url="http://localhost:3000/payment-result"
+        ></script>
+      </form>
+      <div class="status" id="status-2">Esperando que aparezca el botón...</div>
+    </div>
+
+    <div class="test-section">
+      <h2>Instrucciones:</h2>
+      <ol>
+        <li>Abre la consola del navegador (F12)</li>
+        <li>Espera a que aparezcan los botones (puede tardar unos segundos)</li>
+        <li>Si NO aparecen botones, revisa la consola para ver errores de carga del script</li>
+        <li>Si aparecen pero dan BTN-001 al hacer clic, el problema está en la API key o configuración</li>
+        <li>Revisa los mensajes en la consola que empiecen con "Bold Payment Button:"</li>
+      </ol>
+    </div>
+  </div>
+
+  <script>
+    // Verificar que el script de Bold se cargó
+    window.addEventListener('load', function() {
+      console.log('✅ Page loaded');
+      console.log('🔍 Checking for Bold script:', {
+        scriptInHead: !!document.querySelector('script[src*="boldPaymentButton"]'),
+        scriptsInForms: document.querySelectorAll('form script[data-bold-button]').length
+      });
+
+      // Verificar después de 3 segundos si aparecieron los botones
+      setTimeout(function() {
+        const form1 = document.getElementById('form-test-1');
+        const form2 = document.getElementById('form-test-2');
+        const status1 = document.getElementById('status-1');
+        const status2 = document.getElementById('status-2');
+
+        const button1 = form1?.querySelector('button, [class*="bold"], iframe');
+        const button2 = form2?.querySelector('button, [class*="bold"], iframe');
+
+        if (button1) {
+          status1.innerHTML = '✅ Botón encontrado: ' + button1.tagName;
+          status1.style.color = 'green';
+        } else {
+          status1.innerHTML = '❌ Botón NO encontrado después de 3 segundos';
+          status1.style.color = 'red';
+        }
+
+        if (button2) {
+          status2.innerHTML = '✅ Botón encontrado: ' + button2.tagName;
+          status2.style.color = 'green';
+        } else {
+          status2.innerHTML = '❌ Botón NO encontrado después de 3 segundos';
+          status2.style.color = 'red';
+        }
+
+        console.log('🔍 Button check:', {
+          test1Button: !!button1,
+          test2Button: !!button2,
+          form1HTML: form1?.innerHTML.substring(0, 200),
+          form2HTML: form2?.innerHTML.substring(0, 200)
+        });
+      }, 3000);
+    });
+
+    // Capturar errores de Bold
+    window.addEventListener('error', function(e) {
+      console.error('❌ Global Error:', e.message, e.filename, e.lineno);
+      if (e.message && (e.message.includes('Bold') || e.message.includes('bold'))) {
+        console.error('❌ Bold-related Error:', e.message);
+      }
+    });
+
+    // Interceptar console para capturar mensajes de Bold
+    const originalError = console.error;
+    console.error = function(...args) {
+      const message = args[0]?.toString() || '';
+      if (message.includes('Bold') || message.includes('BTN-')) {
+        console.warn('🚨 BOLD ERROR:', ...args);
+      }
+      originalError.apply(console, args);
+    };
+  </script>
+</body>
+</html>
+

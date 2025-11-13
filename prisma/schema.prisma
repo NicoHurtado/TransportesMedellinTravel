@@ -1,0 +1,882 @@
+// Prisma Schema para Medellín Travel
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// TABLAS MAESTRAS
+// ============================================
+
+model Servicio {
+  id                    Int      @id @default(autoincrement())
+  codigo                String   @unique
+  nombreEs              String
+  nombreEn              String
+  descripcionCortaEs    String?  @db.Text
+  descripcionCortaEn    String?  @db.Text
+  descripcionCompletaEs String?  @db.Text
+  descripcionCompletaEn String?  @db.Text
+  imagenUrl             String?
+  tipo                  String // 'transfer', 'tour'
+  tablaReservas         String // nombre de la tabla de reservas
+  activo                Boolean  @default(true)
+  ordenDisplay          Int      @default(0)
+  configuracion         Json? // campos específicos flexibles
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  hotelesActivos HotelServicio[]
+
+  @@map("servicios")
+}
+
+model Vehiculo {
+  id           Int      @id @default(autoincrement())
+  nombre       String
+  capacidadMin Int
+  capacidadMax Int
+  imagenUrl    String?
+  tipo         String? // 'sedan', 'suv', 'van', 'bus'
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  // Relaciones con reservas
+  reservasAirport         ReservaAirportTransfer[]
+  reservasGuatape         ReservaGuatapeTour[]
+  reservasCityTour        ReservaCityTour[]
+  reservasGraffitiTour    ReservaGraffitiTour[]
+  reservasHaciendaNapoles ReservaHaciendaNapolesTour[]
+  reservasOccidente       ReservaOccidenteTour[]
+  reservasParapente       ReservaParapenteTour[]
+  reservasAtv             ReservaAtvTour[]
+  reservasJardin          ReservaJardinTour[]
+  reservasCoffeeFarm      ReservaCoffeeFarmTour[]
+
+  // Relaciones con precios
+  preciosAirport         PrecioAirportTransfer[]
+  preciosGuatape         PrecioVehiculoGuatape[]
+  preciosCityTour        PrecioVehiculoCityTour[]
+  preciosGraffitiTour    PrecioVehiculoGraffitiTour[]
+  preciosHaciendaNapoles PrecioVehiculoHaciendaNapoles[]
+  preciosOccidente       PrecioVehiculoOccidente[]
+  preciosParapente       PrecioVehiculoParapente[]
+  preciosAtv             PrecioVehiculoAtv[]
+  preciosJardin          PrecioVehiculoJardin[]
+  preciosCoffeeFarm      PrecioVehiculoCoffeeFarm[]
+  comisionesHotel        HotelComision[]
+
+  @@map("vehiculos")
+}
+
+model Hotel {
+  id                 Int      @id @default(autoincrement())
+  codigo             String   @unique
+  nombre             String
+  comisionPorcentaje Decimal  @default(10.00) @db.Decimal(5, 2)
+  tarifaCancelacion  Decimal? @db.Decimal(10, 2) // Tarifa de cancelación en COP (opcional)
+  contactoNombre     String?
+  contactoEmail      String?
+  contactoTelefono   String?
+  activo             Boolean  @default(true)
+  createdAt          DateTime @default(now())
+
+  reservasAirport         ReservaAirportTransfer[]
+  reservasGuatape         ReservaGuatapeTour[]
+  reservasCityTour        ReservaCityTour[]
+  reservasGraffitiTour    ReservaGraffitiTour[]
+  reservasHaciendaNapoles ReservaHaciendaNapolesTour[]
+  reservasOccidente       ReservaOccidenteTour[]
+  reservasParapente       ReservaParapenteTour[]
+  reservasAtv             ReservaAtvTour[]
+  reservasJardin          ReservaJardinTour[]
+  reservasCoffeeFarm      ReservaCoffeeFarmTour[]
+  comisiones              HotelComision[]
+  serviciosActivos        HotelServicio[]
+
+  @@map("hoteles")
+}
+
+model HotelComision {
+  id         Int      @id @default(autoincrement())
+  hotelId    Int
+  hotel      Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  vehiculoId Int
+  vehiculo   Vehiculo @relation(fields: [vehiculoId], references: [id], onDelete: Cascade)
+  servicio   String // 'airport-transfer', 'guatape-tour', 'parapente-tour', 'hacienda-napoles-tour', 'city-tour', 'jardin-tour', 'occidente-tour'
+  comision   Decimal  @db.Decimal(10, 2) // Comisión en COP
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([hotelId, servicio, vehiculoId])
+  @@map("hotel_comisiones")
+}
+
+model HotelServicio {
+  id         Int      @id @default(autoincrement())
+  hotelId    Int
+  hotel      Hotel    @relation(fields: [hotelId], references: [id], onDelete: Cascade)
+  servicioId Int
+  servicio   Servicio @relation(fields: [servicioId], references: [id], onDelete: Cascade)
+  activo     Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([hotelId, servicioId])
+  @@map("hotel_servicios")
+}
+
+model Calificacion {
+  id            Int      @id @default(autoincrement())
+  codigoReserva String   @default("") // Código de la reserva (opcional, puede estar vacío)
+  nombreCliente String   // Nombre del cliente que califica
+  estrellas     Int      // Calificación de 1 a 5 estrellas
+  nota          String?  @db.Text // Comentario opcional del cliente
+  createdAt     DateTime @default(now())
+
+  @@map("calificaciones")
+}
+
+model Conductor {
+  id               Int      @id @default(autoincrement())
+  nombre           String
+  whatsapp         String
+  notasAdicionales String?  @db.Text
+  activo           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@map("conductores")
+}
+
+// ============================================
+// TRANSPORTE AEROPUERTO
+// ============================================
+
+model ReservaAirportTransfer {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  // Específico del servicio
+  direccion   String // 'to', 'from'
+  aeropuerto  String // 'MDE', 'EOH'
+  numeroVuelo String?
+  origen      String
+  destino     String
+  municipio   String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json?
+
+  // Notas
+  notasCliente String? @db.Text
+  notasAdmin   String? @db.Text
+
+  // Estado y Asignación
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_airport_transfer")
+}
+
+model PrecioAirportTransfer {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_airport_transfer")
+}
+
+// ============================================
+// TOUR GUATAPÉ
+// ============================================
+
+model ReservaGuatapeTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Servicios adicionales
+  paseoBote         String?
+  precioBote        Decimal @default(0) @db.Decimal(10, 2)
+  cantidadAlmuerzos Int     @default(0)
+  precioAlmuerzos   Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId                 Int
+  vehiculo                   Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase                 Decimal  @db.Decimal(10, 2)
+  precioVehiculo             Decimal  @db.Decimal(10, 2)
+  precioServiciosAdicionales Decimal  @default(0) @db.Decimal(10, 2)
+  precioTotal                Decimal  @db.Decimal(10, 2)
+  comisionHotel              Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal                Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_guatape_tour")
+}
+
+model PrecioGuatapeTour {
+  id                   Int       @id @default(autoincrement())
+  precioBasePorPersona Decimal   @db.Decimal(10, 2)
+  vigenteDesde         DateTime  @default(now()) @db.Date
+  vigenteHasta         DateTime? @db.Date
+  activo               Boolean   @default(true)
+
+  @@map("precios_guatape_tour")
+}
+
+model PrecioVehiculoGuatape {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_guatape")
+}
+
+model PrecioAdicionalGuatape {
+  id           Int       @id @default(autoincrement())
+  tipo         String // 'bote', 'almuerzo', 'guia_espanol', 'guia_ingles'
+  rango        String? // '1-6', '1-15' (para bote)
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@map("precios_adicionales_guatape")
+}
+
+// ============================================
+// CITY TOUR
+// ============================================
+
+model ReservaCityTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_city_tour")
+}
+
+model PrecioVehiculoCityTour {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_city_tour")
+}
+
+// ============================================
+// COMUNA 13 (GRAFFITI TOUR)
+// ============================================
+
+model ReservaGraffitiTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_graffiti_tour")
+}
+
+model PrecioVehiculoGraffitiTour {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_graffiti_tour")
+}
+
+// ============================================
+// HACIENDA NÁPOLES
+// ============================================
+
+model ReservaHaciendaNapolesTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_hacienda_napoles_tour")
+}
+
+model PrecioVehiculoHaciendaNapoles {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_hacienda_napoles")
+}
+
+// ============================================
+// TOUR OCCIDENTE
+// ============================================
+
+model ReservaOccidenteTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_occidente_tour")
+}
+
+model PrecioVehiculoOccidente {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_occidente")
+}
+
+// ============================================
+// PARAPENTE
+// ============================================
+
+model ReservaParapenteTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Específico de parapente
+  cantidadParticipantes Int     @default(0)
+  precioParticipantes   Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_parapente_tour")
+}
+
+model PrecioVehiculoParapente {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_parapente")
+}
+
+// ============================================
+// ATV TOUR
+// ============================================
+
+model ReservaAtvTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Específico de ATV
+  cantidadMotos Int     @default(0)
+  precioMotos   Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_atv_tour")
+}
+
+model PrecioVehiculoAtv {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_atv")
+}
+
+// ============================================
+// JARDÍN TOUR
+// ============================================
+
+model ReservaJardinTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_jardin_tour")
+}
+
+model PrecioVehiculoJardin {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_jardin")
+}
+
+// ============================================
+// COFFEE FARM TOUR
+// ============================================
+
+model ReservaCoffeeFarmTour {
+  id            Int    @id @default(autoincrement())
+  codigoReserva String @unique
+  servicioId    Int
+  hotelId       Int?
+
+  lugarRecogida   String
+  municipio       String? // 'envigado', 'sabaneta', 'itagui', 'medellin'
+  fecha           DateTime @db.Date
+  hora            DateTime @db.Time
+  numeroPasajeros Int
+  idiomaInterfaz  String   @default("es") // 'es' o 'en' - idioma en que se hizo la reserva
+
+  // Idioma y Guía
+  idiomaTour String
+  quiereGuia Boolean @default(false)
+  precioGuia Decimal @default(0) @db.Decimal(10, 2)
+
+  // Vehículo y Precios
+  vehiculoId     Int
+  vehiculo       Vehiculo @relation(fields: [vehiculoId], references: [id])
+  precioBase     Decimal  @db.Decimal(10, 2)
+  precioVehiculo Decimal  @db.Decimal(10, 2)
+  precioTotal    Decimal  @db.Decimal(10, 2)
+  comisionHotel  Decimal  @default(0) @db.Decimal(10, 2)
+  precioFinal    Decimal  @db.Decimal(10, 2)
+
+  // Contacto
+  nombreContacto     String
+  telefonoContacto   String
+  emailContacto      String
+  personasAsistentes Json
+
+  // Notas
+  peticionesEspeciales String? @db.Text
+  notasAdmin           String? @db.Text
+
+  // Estado
+  estado            String  @default("pendiente")
+  conductorAsignado String?
+  vehiculoAsignado  String?
+
+  hotel Hotel? @relation(fields: [hotelId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("reservas_coffee_farm_tour")
+}
+
+model PrecioVehiculoCoffeeFarm {
+  id           Int       @id @default(autoincrement())
+  vehiculoId   Int
+  vehiculo     Vehiculo  @relation(fields: [vehiculoId], references: [id])
+  pasajerosMin Int
+  pasajerosMax Int
+  precio       Decimal   @db.Decimal(10, 2)
+  vigenteDesde DateTime  @default(now()) @db.Date
+  vigenteHasta DateTime? @db.Date
+  activo       Boolean   @default(true)
+
+  @@unique([vehiculoId, pasajerosMin, pasajerosMax, vigenteDesde])
+  @@map("precios_vehiculos_coffee_farm")
+}

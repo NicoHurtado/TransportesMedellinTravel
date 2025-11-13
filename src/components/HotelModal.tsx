@@ -8,18 +8,44 @@ import { motion, AnimatePresence } from 'framer-motion';
 interface HotelModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onLink: (code: string) => void;
+  onLink: (code: string, nombre: string, id: number, comisiones: Array<{ id: number; servicio: string; vehiculoId: number; comision: number }>, comision?: number) => void;
 }
 
 export default function HotelModal({ isOpen, onClose, onLink }: HotelModalProps) {
   const { t } = useLanguage();
   const [code, setCode] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (code.trim()) {
-      onLink(code.trim());
-      setCode('');
+    if (!code.trim()) return;
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      const response = await fetch(`/api/hoteles/validate/${code.trim().toUpperCase()}`);
+      const data = await response.json();
+
+      if (data.success) {
+        onLink(
+          data.data.codigo,
+          data.data.nombre,
+          data.data.id,
+          data.data.comisiones || [],
+          data.data.comisionPorcentaje
+        );
+        setCode('');
+        onClose();
+      } else {
+        setError('Código de hotel no válido. Por favor verifica el código e intenta nuevamente.');
+      }
+    } catch (err) {
+      console.error('Error validating hotel code:', err);
+      setError('Error al validar el código. Por favor intenta nuevamente.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -64,17 +90,27 @@ export default function HotelModal({ isOpen, onClose, onLink }: HotelModalProps)
                 <input
                   type="text"
                   value={code}
-                  onChange={(e) => setCode(e.target.value)}
+                  onChange={(e) => {
+                    setCode(e.target.value);
+                    setError(null);
+                  }}
                   placeholder={t('hotelCodePlaceholder')}
                   className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-black transition-colors"
+                  disabled={loading}
                 />
+
+                {error && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-xl">
+                    <p className="text-sm text-red-800">{error}</p>
+                  </div>
+                )}
 
                 <button
                   type="submit"
-                  disabled={!code.trim()}
+                  disabled={!code.trim() || loading}
                   className="w-full py-3 bg-black text-white rounded-xl font-medium hover:bg-gray-800 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed min-h-[44px]"
                 >
-                  {t('link')}
+                  {loading ? 'Validando...' : t('link')}
                 </button>
               </form>
             </div>

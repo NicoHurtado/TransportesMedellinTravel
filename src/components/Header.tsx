@@ -3,16 +3,22 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
+import { useHotel } from '@/contexts/HotelContext';
 import HotelModal from './HotelModal';
 
 export default function Header() {
   const { language, toggleLanguage, t } = useLanguage();
+  const { isHotel, hotelName, setHotel, clearHotel } = useHotel();
   const [showHotelModal, setShowHotelModal] = useState(false);
-  const [linkedHotel, setLinkedHotel] = useState<string | null>(null);
 
-  const handleHotelLink = (code: string) => {
-    // In a real app, validate the code with an API
-    setLinkedHotel(`Hotel ${code.toUpperCase()}`);
+  const handleHotelLink = (
+    code: string, 
+    nombre: string, 
+    id: number, 
+    comisiones: Array<{ id: number; servicio: string; vehiculoId: number; comision: number }>, 
+    comision?: number
+  ) => {
+    setHotel(code, nombre, id, comisiones, comision);
     setShowHotelModal(false);
   };
 
@@ -56,13 +62,22 @@ export default function Header() {
           </div>
 
           {/* Linked hotel notification */}
-          {linkedHotel && (
-            <div className="pb-3 pt-1">
-              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-black text-white rounded-full text-xs sm:text-sm">
-                <span className="w-1.5 h-1.5 bg-accent rounded-full" />
-                <span>
-                  {t('hotelLinked')}: <strong>{linkedHotel}</strong>
-                </span>
+          {isHotel && hotelName && (
+            <div className="pb-4 pt-2">
+              <div className="bg-gradient-to-r from-black to-gray-800 text-white rounded-xl p-4 shadow-lg">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-gray-300 mb-1">Perfil de Hotel</p>
+                    <h2 className="text-2xl sm:text-3xl font-bold">{hotelName}</h2>
+                  </div>
+                  <button
+                    onClick={clearHotel}
+                    className="px-4 py-2 bg-white/10 hover:bg-white/20 rounded-lg text-sm font-medium transition-colors"
+                    aria-label="Desvincular hotel"
+                  >
+                    {t('clearHotel') || 'Salir'}
+                  </button>
+                </div>
               </div>
             </div>
           )}

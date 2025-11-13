@@ -1,0 +1,124 @@
+import { NextRequest, NextResponse } from 'next/server';
+import prisma from '@/lib/prisma';
+import { generateReservationCode } from '@/lib/generateCode';
+import { parseTimeToDate } from '@/lib/parseTime';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    
+    const {
+      lugarRecogida,
+      fecha,
+      hora,
+      numeroPasajeros,
+      idiomaTour,
+      quiereGuia,
+      precioGuia,
+      cantidadParticipantes,
+      precioParticipantes,
+      vehiculoId,
+      precioBase,
+      precioVehiculo,
+      precioTotal,
+      comisionHotel,
+      precioFinal,
+      nombreContacto,
+      telefonoContacto,
+      emailContacto,
+      personasAsistentes,
+      peticionesEspeciales,
+      hotelId,
+    } = body;
+
+    const codigoReserva = generateReservationCode();
+
+    const reserva = await prisma.reservaParapenteTour.create({
+      data: {
+        codigoReserva,
+        servicioId: 8,
+        hotelId: hotelId || null,
+        lugarRecogida,
+        fecha: new Date(fecha),
+        hora: parseTimeToDate(hora),
+        numeroPasajeros,
+        idiomaTour,
+        quiereGuia: quiereGuia || false,
+        precioGuia: precioGuia || 0,
+        cantidadParticipantes: cantidadParticipantes || 0,
+        precioParticipantes: precioParticipantes || 0,
+        vehiculoId,
+        precioBase,
+        precioVehiculo,
+        precioTotal,
+        comisionHotel: comisionHotel || 0,
+        precioFinal,
+        nombreContacto,
+        telefonoContacto,
+        emailContacto: emailContacto?.toLowerCase().trim() || emailContacto, // Normalizar email a lowercase
+        personasAsistentes,
+        peticionesEspeciales,
+        estado: 'agendada_con_cotizacion', // Estado inicial cuando se crea la reserva antes del pago
+      },
+      include: {
+        vehiculo: true,
+        hotel: true,
+      },
+    });
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: reserva,
+        trackingUrl: `/tracking/${codigoReserva}`,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error('Error creating Parapente Tour reservation:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Error al crear la reserva',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const estado = searchParams.get('estado');
+
+    const where: any = {};
+    if (estado) where.estado = estado;
+
+    const reservas = await prisma.reservaParapenteTour.findMany({
+      where,
+      include: {
+        vehiculo: true,
+        hotel: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    return NextResponse.json({
+      success: true,
+      data: reservas,
+    });
+  } catch (error) {
+    console.error('Error fetching Parapente Tour reservations:', error);
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Error al obtener las reservas',
+      },
+      { status: 500 }
+    );
+  }
+}
+
+

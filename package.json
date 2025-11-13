@@ -6,25 +6,38 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed": "tsx scripts/seed.ts",
+    "upload-csv": "tsx scripts/upload-csv-to-db.ts",
+    "verify-db": "tsx scripts/verify-db.ts"
   },
   "dependencies": {
+    "@prisma/client": "^6.19.0",
+    "@types/nodemailer": "^7.0.3",
+    "csv-parse": "^6.1.0",
+    "dotenv": "^17.2.3",
+    "framer-motion": "^11.0.0",
+    "html2canvas": "^1.4.1",
+    "lucide-react": "^0.344.0",
     "next": "^14.2.0",
+    "nodemailer": "^7.0.10",
+    "pg": "^8.16.3",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "framer-motion": "^11.0.0",
-    "lucide-react": "^0.344.0"
+    "recharts": "^3.4.1"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
+    "@types/pg": "^8.15.6",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
-    "typescript": "^5.3.0",
-    "tailwindcss": "^3.4.0",
-    "postcss": "^8.4.0",
     "autoprefixer": "^10.4.0",
     "eslint": "^8.56.0",
-    "eslint-config-next": "^14.2.0"
+    "eslint-config-next": "^14.2.0",
+    "postcss": "^8.4.0",
+    "prisma": "^6.19.0",
+    "tailwindcss": "^3.4.0",
+    "tsx": "^4.20.6",
+    "typescript": "^5.3.0"
   }
 }
-

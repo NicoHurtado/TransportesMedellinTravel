@@ -3,7 +3,8 @@
 import { motion } from 'framer-motion';
 import { useLanguage } from '@/contexts/LanguageContext';
 import { CheckCircle, Copy, ExternalLink } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getBaseUrl } from '@/lib/url';
 
 interface ConfirmationProps {
   trackingId: string;
@@ -13,10 +14,12 @@ interface ConfirmationProps {
 export default function Confirmation({ trackingId, onClose }: ConfirmationProps) {
   const { t } = useLanguage();
   const [copied, setCopied] = useState(false);
+  const [trackingUrl, setTrackingUrl] = useState(`/track/${trackingId}`);
   
-  const trackingUrl = typeof window !== 'undefined' 
-    ? `${window.location.origin}/track/${trackingId}`
-    : `/track/${trackingId}`;
+  useEffect(() => {
+    const baseUrl = getBaseUrl();
+    setTrackingUrl(`${baseUrl}/track/${trackingId}`);
+  }, [trackingId]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(trackingUrl);

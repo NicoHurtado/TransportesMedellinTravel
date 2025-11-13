@@ -7,13 +7,18 @@ import Image from 'next/image';
 interface ServiceCardProps {
   id: string;
   image: string;
-  titleKey: string;
-  descriptionKey: string;
+  titleKey: string; // Can be a translation key or direct text
+  descriptionKey: string; // Can be a translation key or direct text
   onBook: (serviceId: string) => void;
 }
 
 export default function ServiceCard({ id, image, titleKey, descriptionKey, onBook }: ServiceCardProps) {
   const { t } = useLanguage();
+
+  // Check if titleKey/descriptionKey are translation keys (they would be in the translation object)
+  // or direct text (they won't be found in translations)
+  const title = t(titleKey as any) !== titleKey ? t(titleKey as any) : titleKey;
+  const description = t(descriptionKey as any) !== descriptionKey ? t(descriptionKey as any) : descriptionKey;
 
   return (
     <motion.div
@@ -28,7 +33,7 @@ export default function ServiceCard({ id, image, titleKey, descriptionKey, onBoo
         {image.startsWith('/') ? (
           <Image 
             src={image} 
-            alt={t(titleKey as any)}
+            alt={title}
             fill
             className="object-cover"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -45,10 +50,10 @@ export default function ServiceCard({ id, image, titleKey, descriptionKey, onBoo
       {/* Content */}
       <div className="p-6 flex flex-col flex-1">
         <h3 className="text-xl font-semibold mb-2 text-black">
-          {t(titleKey as any)}
+          {title}
         </h3>
         <p className="text-gray-600 mb-6 leading-relaxed flex-1">
-          {t(descriptionKey as any)}
+          {description}
         </p>
 
         <button

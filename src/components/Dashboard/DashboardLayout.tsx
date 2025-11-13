@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import { useLanguage } from '@/contexts/LanguageContext';
 import {
@@ -11,8 +11,11 @@ import {
   Database,
   Users,
   Car,
+  Truck,
+  Settings,
   Menu,
   X,
+  Star,
 } from 'lucide-react';
 
 interface DashboardLayoutProps {
@@ -22,18 +25,57 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children }: DashboardLayoutProps) {
   const { t } = useLanguage();
   const router = useRouter();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [sidebarHovered, setSidebarHovered] = useState(false);
-  const [activeView, setActiveView] = useState('trays');
 
   const menuItems = [
     { id: 'trays', icon: Inbox, label: t('trays'), href: '/panel/dashboard' },
     { id: 'calendar', icon: Calendar, label: t('calendar'), href: '/panel/dashboard/calendar' },
     { id: 'statistics', icon: BarChart3, label: t('statistics'), href: '/panel/dashboard/statistics' },
     { id: 'database', icon: Database, label: t('database'), href: '/panel/dashboard/database' },
+    { id: 'services', icon: Settings, label: 'Servicios', href: '/panel/dashboard/services' },
     { id: 'partners', icon: Users, label: t('partners'), href: '/panel/dashboard/partners' },
+    { id: 'vehicles', icon: Truck, label: 'Vehículos', href: '/panel/dashboard/vehicles' },
     { id: 'drivers', icon: Car, label: t('drivers'), href: '/panel/dashboard/drivers' },
+    { id: 'calificaciones', icon: Star, label: 'Calificaciones', href: '/panel/dashboard/calificaciones' },
   ];
+
+  // Determine active view based on current pathname
+  const getActiveView = (currentPathname: string | null): string => {
+    if (!currentPathname) {
+      // Try to get from localStorage on initial load
+      if (typeof window !== 'undefined') {
+        const saved = localStorage.getItem('panel_active_section');
+        if (saved && menuItems.some(item => item.id === saved)) {
+          return saved;
+        }
+      }
+      return 'trays';
+    }
+    
+    // Find the menu item that matches the current pathname
+    const activeItem = menuItems.find(item => {
+      if (item.href === '/panel/dashboard') {
+        return currentPathname === '/panel/dashboard' || currentPathname === '/panel/dashboard/';
+      }
+      return currentPathname.startsWith(item.href);
+    });
+    
+    return activeItem?.id || 'trays';
+  };
+
+  const [activeView, setActiveView] = useState(() => getActiveView(pathname));
+
+  // Update active view when pathname changes
+  useEffect(() => {
+    const newActiveView = getActiveView(pathname);
+    setActiveView(newActiveView);
+    // Save to localStorage for persistence
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('panel_active_section', newActiveView);
+    }
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -84,6 +126,7 @@ export default function DashboardLayout({ children }: DashboardLayoutProps) {
                 key={item.id}
                 onClick={() => {
                   setActiveView(item.id);
+                  localStorage.setItem('panel_active_section', item.id);
                   router.push(item.href);
                   setSidebarOpen(false);
                 }}
