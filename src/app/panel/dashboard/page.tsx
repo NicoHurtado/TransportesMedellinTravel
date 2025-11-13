@@ -1,9 +1,8 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { 
-  Calendar, 
   Filter, 
   Search, 
   ChevronRight,
@@ -31,26 +30,52 @@ interface Reserva {
   hotel: string | null;
   conductorAsignado: string | null;
   createdAt: string;
+  origen?: string;
+  destino?: string;
+  lugarRecogida?: string;
+  vehiculo?: string;
 }
 
 export default function DashboardPage() {
   const [reservas, setReservas] = useState<Reserva[]>([]);
+  const [allReservas, setAllReservas] = useState<Reserva[]>([]); // Para calcular contadores
   const [loading, setLoading] = useState(true);
   const [selectedEstado, setSelectedEstado] = useState<string>('all');
   const [selectedServicio, setSelectedServicio] = useState<string>('all');
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedDate, setSelectedDate] = useState('');
 
+  // Cargar todas las reservas para contadores (sin filtro de estado)
+  useEffect(() => {
+    const fetchAllReservas = async () => {
+      try {
+        const params = new URLSearchParams();
+        if (selectedServicio !== 'all') params.append('servicio', selectedServicio);
+
+        const response = await fetch(`/api/reservations/all?${params.toString()}`);
+        const data = await response.json();
+
+        if (data.success) {
+          setAllReservas(data.data);
+        }
+      } catch (error) {
+        console.error('Error fetching all reservations:', error);
+      }
+    };
+    
+    fetchAllReservas();
+  }, [selectedServicio]);
+
+  // Cargar reservas filtradas para mostrar en la tabla
   useEffect(() => {
     fetchReservas();
-  }, [selectedEstado, selectedServicio, selectedDate]);
+  }, [selectedEstado, selectedServicio]);
 
   const fetchReservas = async () => {
     try {
+      setLoading(true);
       const params = new URLSearchParams();
       if (selectedEstado !== 'all') params.append('estado', selectedEstado);
       if (selectedServicio !== 'all') params.append('servicio', selectedServicio);
-      if (selectedDate) params.append('fecha', selectedDate);
 
       const response = await fetch(`/api/reservations/all?${params.toString()}`);
       const data = await response.json();
@@ -65,16 +90,26 @@ export default function DashboardPage() {
     }
   };
 
-  const filteredReservas = reservas.filter((reserva) => {
-    if (!searchTerm) return true;
-    const search = searchTerm.toLowerCase();
-    return (
-      reserva.codigoReserva.toLowerCase().includes(search) ||
-      reserva.nombreContacto.toLowerCase().includes(search) ||
-      reserva.telefonoContacto.includes(search) ||
-      reserva.emailContacto.toLowerCase().includes(search)
-    );
-  });
+  // Filtrar reservas según el término de búsqueda
+  const filteredReservas = useMemo(() => {
+    // Si no hay término de búsqueda, mostrar todas las reservas
+    if (!searchTerm || searchTerm.trim() === '') {
+      return reservas;
+    }
+    
+    const search = searchTerm.trim().toLowerCase();
+    
+    // Filtrar reservas que coincidan en código, cliente o servicio
+    return reservas.filter((reserva) => {
+      // Obtener valores de los campos a buscar
+      const codigo = String(reserva.codigoReserva || '').toLowerCase();
+      const cliente = String(reserva.nombreContacto || '').toLowerCase();
+      const servicio = String(reserva.nombreServicio || '').toLowerCase();
+      
+      // Buscar el término en cualquiera de los tres campos
+      return codigo.includes(search) || cliente.includes(search) || servicio.includes(search);
+    });
+  }, [reservas, searchTerm]);
 
   const getEstadoColor = (estado: string) => {
     switch (estado) {
@@ -127,12 +162,13 @@ export default function DashboardPage() {
   };
 
   const estadoCounts = {
-    all: reservas.length,
-    pendiente: reservas.filter((r) => r.estado === 'pendiente').length,
-    confirmada: reservas.filter((r) => r.estado === 'confirmada').length,
-    asignada: reservas.filter((r) => r.estado === 'asignada').length,
-    completada: reservas.filter((r) => r.estado === 'completada').length,
-    cancelada: reservas.filter((r) => r.estado === 'cancelada').length,
+    all: allReservas.length,
+    pendiente_por_cotizacion: allReservas.filter((r) => r.estado === 'pendiente_por_cotizacion' || r.estado === 'pendiente').length,
+    agendada_con_cotizacion: allReservas.filter((r) => r.estado === 'agendada_con_cotizacion' || r.estado === 'confirmada').length,
+    pagado: allReservas.filter((r) => r.estado === 'pagado').length,
+    asignada: allReservas.filter((r) => r.estado === 'asignada').length,
+    completada: allReservas.filter((r) => r.estado === 'completada').length,
+    cancelada: allReservas.filter((r) => r.estado === 'cancelada').length,
   };
 
   if (loading) {
@@ -162,39 +198,39 @@ export default function DashboardPage() {
         {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6">
           <button
-            onClick={() => setSelectedEstado('all')}
+            onClick={() => setSelectedEstado('pendiente_por_cotizacion')}
             className={`p-4 rounded-xl transition-all ${
-              selectedEstado === 'all'
-                ? 'bg-black text-white shadow-lg'
+              selectedEstado === 'pendiente_por_cotizacion'
+                ? 'bg-orange-500 text-white shadow-lg'
                 : 'bg-white hover:shadow-md'
             }`}
           >
-            <p className="text-2xl font-bold">{estadoCounts.all}</p>
-            <p className="text-sm opacity-80">Todas</p>
-          </button>
-
-          <button
-            onClick={() => setSelectedEstado('pendiente')}
-            className={`p-4 rounded-xl transition-all ${
-              selectedEstado === 'pendiente'
-                ? 'bg-yellow-500 text-white shadow-lg'
-                : 'bg-white hover:shadow-md'
-            }`}
-          >
-            <p className="text-2xl font-bold">{estadoCounts.pendiente}</p>
+            <p className="text-2xl font-bold">{estadoCounts.pendiente_por_cotizacion}</p>
             <p className="text-sm opacity-80">Pendientes</p>
           </button>
 
           <button
-            onClick={() => setSelectedEstado('confirmada')}
+            onClick={() => setSelectedEstado('agendada_con_cotizacion')}
             className={`p-4 rounded-xl transition-all ${
-              selectedEstado === 'confirmada'
+              selectedEstado === 'agendada_con_cotizacion'
                 ? 'bg-blue-500 text-white shadow-lg'
                 : 'bg-white hover:shadow-md'
             }`}
           >
-            <p className="text-2xl font-bold">{estadoCounts.confirmada}</p>
-            <p className="text-sm opacity-80">Confirmadas</p>
+            <p className="text-2xl font-bold">{estadoCounts.agendada_con_cotizacion}</p>
+            <p className="text-sm opacity-80">Agendadas</p>
+          </button>
+
+          <button
+            onClick={() => setSelectedEstado('pagado')}
+            className={`p-4 rounded-xl transition-all ${
+              selectedEstado === 'pagado'
+                ? 'bg-yellow-500 text-white shadow-lg'
+                : 'bg-white hover:shadow-md'
+            }`}
+          >
+            <p className="text-2xl font-bold">{estadoCounts.pagado}</p>
+            <p className="text-sm opacity-80">Pagadas</p>
           </button>
 
           <button
@@ -236,13 +272,13 @@ export default function DashboardPage() {
 
         {/* Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Search */}
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
               <input
                 type="text"
-                placeholder="Buscar por código, nombre, teléfono..."
+                placeholder="Buscar por código, cliente, servicio..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black"
@@ -271,16 +307,6 @@ export default function DashboardPage() {
               </select>
             </div>
 
-            {/* Date Filter */}
-            <div className="relative">
-              <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-black"
-              />
-            </div>
           </div>
         </div>
 
@@ -333,7 +359,10 @@ export default function DashboardPage() {
                       key={reserva.id}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="hover:bg-gray-50 transition-colors"
+                      onClick={() => {
+                        window.location.href = `/panel/reserva/${reserva.tipoServicio}/${reserva.id}`;
+                      }}
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
                     >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="font-mono text-sm font-medium text-gray-900">
@@ -386,13 +415,16 @@ export default function DashboardPage() {
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <a
-                          href={`/panel/reserva/${reserva.tipoServicio}/${reserva.id}`}
-                          className="inline-flex items-center gap-1 text-black hover:text-gray-700 font-semibold"
+                        <div
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            window.location.href = `/panel/reserva/${reserva.tipoServicio}/${reserva.id}`;
+                          }}
+                          className="inline-flex items-center gap-1 text-black hover:text-gray-700 font-semibold cursor-pointer"
                         >
                           Ver detalles
                           <ChevronRight className="w-4 h-4" />
-                        </a>
+                        </div>
                       </td>
                     </motion.tr>
                   ))}
@@ -405,27 +437,13 @@ export default function DashboardPage() {
         {/* Summary Footer */}
         {filteredReservas.length > 0 && (
           <div className="mt-6 bg-white rounded-xl shadow-sm p-6">
-            <div className="flex items-center justify-between">
-              <p className="text-sm text-gray-600">
-                Mostrando{' '}
-                <span className="font-semibold text-gray-900">
-                  {filteredReservas.length}
-                </span>{' '}
-                {filteredReservas.length === 1 ? 'reserva' : 'reservas'}
-              </p>
-              <div className="text-right">
-                <p className="text-sm text-gray-600">Ingresos totales</p>
-                <p className="text-2xl font-bold text-gray-900">
-                  {new Intl.NumberFormat('es-CO').format(
-                    filteredReservas.reduce(
-                      (sum, r) => sum + r.precioFinal,
-                      0
-                    )
-                  )}{' '}
-                  COP
-                </p>
-              </div>
-            </div>
+            <p className="text-sm text-gray-600">
+              Mostrando{' '}
+              <span className="font-semibold text-gray-900">
+                {filteredReservas.length}
+              </span>{' '}
+              {filteredReservas.length === 1 ? 'reserva' : 'reservas'}
+            </p>
           </div>
         )}
       </div>
