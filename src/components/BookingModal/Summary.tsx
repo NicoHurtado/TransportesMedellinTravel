@@ -176,6 +176,17 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
         }
 
         try {
+          // Log detallado antes de generar el hash
+          console.log('🔐 [BOLD HASH GENERATION] Enviando datos para generar hash:', {
+            orderId,
+            amount,
+            amountType: typeof amount,
+            amountIsInteger: Number.isInteger(amount),
+            currency: 'COP',
+            nodeEnv: typeof window !== 'undefined' ? 'client' : 'server',
+            hostname: typeof window !== 'undefined' ? window.location.hostname : 'server'
+          });
+          
           const response = await fetch('/api/bold/generate-hash', {
             method: 'POST',
             headers: {
@@ -189,19 +200,25 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
           });
           
           if (!response.ok) {
-            const errorData = await response.json();
-            console.error('Error response from API:', errorData);
+            const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+            console.error('❌ [BOLD HASH GENERATION] Error response from API:', {
+              status: response.status,
+              statusText: response.statusText,
+              error: errorData
+            });
             throw new Error(errorData.error || 'Error generating hash');
           }
           
           const result = await response.json();
           
           if (result.hash) {
-            console.log('Bold hash generated successfully:', {
+            console.log('✅ [BOLD HASH GENERATION] Hash generado exitosamente:', {
               orderId,
               amount,
               currency: 'COP',
-              hash: result.hash.substring(0, 20) + '...'
+              hashLength: result.hash.length,
+              hashFormat: /^[a-f0-9]{64}$/i.test(result.hash),
+              hashPreview: result.hash.substring(0, 20) + '...'
             });
             setBoldHash(result.hash);
             
@@ -304,13 +321,30 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
       if (!boldButtonRef.current) return;
       boldButtonRef.current.innerHTML = '';
 
-      // Usar la llave de identidad de prueba del tab "Botón de pagos"
-      // IMPORTANTE: Esta debe ser la llave del tab "Botón de pagos", NO la de "API Integrations"
-      const expectedApiKey = 'nlFAEO2PDp9Pe2m3gZo5AepFKLWjg_9jpxhajnXkmbA';
-      // Intentar obtener de process.env, si no está disponible usar el valor esperado como fallback
-      const apiKey = (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_BOLD_PUBLIC_KEY_TEST) 
+      // Usar la llave pública según el entorno
+      // En desarrollo: usar la clave de test
+      // En producción: usar la clave de producción (si está configurada) o la de test como fallback
+      const isDevelopment = typeof window !== 'undefined' && 
+        (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+      
+      const expectedApiKeyTest = 'nlFAEO2PDp9Pe2m3gZo5AepFKLWjg_9jpxhajnXkmbA';
+      
+      // En producción, intentar usar la clave pública de producción primero
+      const apiKeyProduction = typeof window !== 'undefined' 
+        ? process.env.NEXT_PUBLIC_BOLD_PUBLIC_KEY 
+        : undefined;
+      
+      // En desarrollo o si no hay clave de producción, usar la de test
+      const apiKeyTest = typeof window !== 'undefined' 
         ? process.env.NEXT_PUBLIC_BOLD_PUBLIC_KEY_TEST 
-        : expectedApiKey;
+        : undefined;
+      
+      // Determinar qué clave usar
+      const apiKey = isDevelopment 
+        ? (apiKeyTest || expectedApiKeyTest)
+        : (apiKeyProduction || apiKeyTest || expectedApiKeyTest);
+      
+      const expectedApiKey = isDevelopment ? expectedApiKeyTest : (apiKeyProduction || expectedApiKeyTest);
       
       // Log detallado para debugging
       console.log('🔑 API Key Check:', {
@@ -424,10 +458,11 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
       }
 
       // LOG CRÍTICO: [BOLD CONFIG] - Exactamente lo que se va a pasar a Bold
-      console.log('[BOLD CONFIG]', {
+      console.log('🔐 [BOLD CONFIG] Configuración completa del botón:', {
         apiKey: apiKey || 'UNDEFINED',
         apiKeyLength: apiKey?.length || 0,
         apiKeyMatches: apiKey === expectedApiKey,
+        apiKeySource: isDevelopment ? 'test' : (apiKeyProduction ? 'production' : 'test (fallback)'),
         orderId: boldOrderId,
         orderIdLength: boldOrderId.length,
         orderIdValid: /^[a-zA-Z0-9_-]{1,60}$/.test(boldOrderId),
@@ -439,9 +474,15 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
         integritySignature: boldHash,
         integritySignatureLength: boldHash.length,
         integritySignatureValid: boldHash.length === 64 && /^[a-f0-9]{64}$/i.test(boldHash),
+        integritySignaturePreview: boldHash.substring(0, 20) + '...',
         redirectionUrl: redirectionUrl || '(no configurada - localhost)',
         baseUrl,
-        isLocalhost: baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1')
+        isLocalhost: baseUrl.includes('localhost') || baseUrl.includes('127.0.0.1'),
+        environment: isDevelopment ? 'development' : 'production',
+        // Verificar que los datos coincidan con los usados para generar el hash
+        savedAmount: sessionStorage.getItem('boldAmount'),
+        savedOrderId: sessionStorage.getItem('boldOrderId'),
+        dataMatches: savedAmount === amountStr && savedOrderId === boldOrderId
       });
 
       // Validaciones críticas antes de crear el botón
