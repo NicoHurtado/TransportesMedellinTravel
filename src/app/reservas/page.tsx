@@ -121,27 +121,57 @@ export default function ReservasPage() {
 
     const fetchServices = async () => {
       try {
+        setLoading(true);
+        
         // Si es hotel, filtrar servicios activos para ese hotel
-        const url = isHotel && hotelId 
+        // Validar que hotelId sea un número válido antes de usarlo
+        const url = isHotel && hotelId && typeof hotelId === 'number' && !isNaN(hotelId)
           ? `/api/services?hotelId=${hotelId}`
           : '/api/services';
         
         console.log('🔍 Fetching services:', { isHotel, hotelId, url, contextReady });
         
         const response = await fetch(url);
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
         const data = await response.json();
         
         if (data.success) {
           // Los servicios ya vienen filtrados por el backend cuando hay hotelId
           // Solo mostrar los servicios que vienen del backend (ya filtrados)
-          const servicesToShow = data.data.servicios || [];
+          const servicesToShow = data.data?.servicios || [];
           console.log(`✅ Servicios recibidos: ${servicesToShow.length}`, servicesToShow.map((s: Service) => s.codigo));
           setServices(servicesToShow);
         } else {
-          console.error('❌ Error en respuesta de servicios:', data.error);
+          console.error('❌ Error en respuesta de servicios:', data.error, data.details);
+          // Si hay error pero no es crítico, intentar cargar sin filtro de hotel
+          if (isHotel && hotelId) {
+            console.log('🔄 Intentando cargar servicios sin filtro de hotel...');
+            const fallbackResponse = await fetch('/api/services');
+            const fallbackData = await fallbackResponse.json();
+            if (fallbackData.success) {
+              setServices(fallbackData.data?.servicios || []);
+            }
+          }
         }
       } catch (error) {
         console.error('❌ Error fetching services:', error);
+        // En caso de error, intentar cargar servicios sin filtro
+        if (isHotel && hotelId) {
+          try {
+            console.log('🔄 Intentando cargar servicios sin filtro de hotel como fallback...');
+            const fallbackResponse = await fetch('/api/services');
+            const fallbackData = await fallbackResponse.json();
+            if (fallbackData.success) {
+              setServices(fallbackData.data?.servicios || []);
+            }
+          } catch (fallbackError) {
+            console.error('❌ Error en fallback:', fallbackError);
+          }
+        }
       } finally {
         setLoading(false);
       }
