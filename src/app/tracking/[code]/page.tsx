@@ -348,9 +348,22 @@ function TrackingPageContent() {
         return;
       }
 
+      // IMPORTANTE: Siempre incluir src para que Bold procese el script
+      // El navegador ignorará la carga duplicada si ya está cargado, pero Bold necesita el src
       const script = document.createElement('script');
       script.src = 'https://checkout.bold.co/library/boldPaymentButton.js';
       script.async = true;
+      
+      // Verificar si el script ya está cargado para logging
+      const boldScriptAlreadyLoaded = typeof window !== 'undefined' && 
+        (document.querySelector('script[src*="boldPaymentButton"]') !== null ||
+         (window as any).BoldPaymentButton !== undefined);
+      
+      if (boldScriptAlreadyLoaded) {
+        console.log('✅ Script de Bold ya está cargado, pero incluyendo src para que Bold lo procese');
+      } else {
+        console.log('📦 Cargando script de Bold dinámicamente');
+      }
       
       // Atributos obligatorios cuando hay amount
       script.setAttribute('data-bold-button', 'dark-L');

@@ -29,10 +29,10 @@ export default function RootLayout({
   return (
     <html lang="es">
       <body className={inter.className}>
-        {/* Cargar el script de Bold UNA VEZ antes de que se renderice cualquier contenido */}
+        {/* Cargar el script de Bold UNA VEZ de forma asíncrona para evitar conflictos */}
         <Script
           src="https://checkout.bold.co/library/boldPaymentButton.js"
-          strategy="beforeInteractive"
+          strategy="lazyOnload"
         />
         <LanguageProvider>
           <HotelProvider>

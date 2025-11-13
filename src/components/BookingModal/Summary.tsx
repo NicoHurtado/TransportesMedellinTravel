@@ -256,22 +256,46 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
   // Crear el botón de Bold cuando el hash esté listo
   useEffect(() => {
     const priceToUse = finalPrice || data.totalPrice || 0;
-    if (!boldHash || !boldOrderId || !boldButtonRef.current || priceToUse <= 0 || isHotel) return;
+    
+    console.log('🔍 [BOLD BUTTON] Verificando condiciones:', {
+      boldHash: !!boldHash,
+      boldHashLength: boldHash?.length,
+      boldOrderId: !!boldOrderId,
+      boldOrderIdValue: boldOrderId,
+      boldButtonRefCurrent: !!boldButtonRef.current,
+      priceToUse,
+      isHotel,
+      shouldCreate: !!(boldHash && boldOrderId && boldButtonRef.current && priceToUse > 0 && !isHotel)
+    });
+    
+    if (!boldHash || !boldOrderId || !boldButtonRef.current || priceToUse <= 0 || isHotel) {
+      console.log('⏸️ [BOLD BUTTON] Condiciones no cumplidas, no se creará el botón');
+      return;
+    }
 
     // Esperar a que el script de Bold esté cargado
     const checkBoldScript = () => {
-      // Verificar si el script de Bold está disponible
-      const boldScriptLoaded = typeof window !== 'undefined' && 
-        (document.querySelector('script[src*="boldPaymentButton"]') !== null ||
-         (window as any).BoldPaymentButton !== undefined);
+      // Verificar si el script de Bold está disponible de múltiples formas
+      const scriptInDOM = typeof window !== 'undefined' && 
+        document.querySelector('script[src*="boldPaymentButton"]') !== null;
+      const boldGlobal = typeof window !== 'undefined' && 
+        (window as any).BoldPaymentButton !== undefined;
+      const boldScriptLoaded = scriptInDOM || boldGlobal;
+      
+      console.log('🔍 [BOLD SCRIPT CHECK]', {
+        scriptInDOM,
+        boldGlobal,
+        boldScriptLoaded,
+        allScripts: typeof window !== 'undefined' ? Array.from(document.querySelectorAll('script[src]')).map(s => (s as HTMLScriptElement).src) : []
+      });
       
       if (!boldScriptLoaded) {
-        console.log('⏳ Esperando a que el script de Bold se cargue...');
+        console.log('⏳ [BOLD BUTTON] Esperando a que el script de Bold se cargue...');
         setTimeout(checkBoldScript, 100);
         return;
       }
 
-      console.log('✅ Script de Bold cargado, creando botón...');
+      console.log('✅ [BOLD BUTTON] Script de Bold cargado, creando botón...');
       createButton();
     };
 
@@ -445,11 +469,22 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
         return;
       }
 
-      // Script CON src: según la doc de Bold, cuando agregas scripts dinámicamente,
-      // debes incluir src en el mismo script tag para que Bold lo procese
+      // IMPORTANTE: Siempre incluir src para que Bold procese el script
+      // El navegador ignorará la carga duplicada si ya está cargado, pero Bold necesita el src
       const script = document.createElement('script');
       script.src = 'https://checkout.bold.co/library/boldPaymentButton.js';
       script.async = true;
+      
+      // Verificar si el script ya está cargado para logging
+      const boldScriptAlreadyLoaded = typeof window !== 'undefined' && 
+        (document.querySelector('script[src*="boldPaymentButton"]') !== null ||
+         (window as any).BoldPaymentButton !== undefined);
+      
+      if (boldScriptAlreadyLoaded) {
+        console.log('✅ Script de Bold ya está cargado, pero incluyendo src para que Bold lo procese');
+      } else {
+        console.log('📦 Cargando script de Bold dinámicamente');
+      }
       
       // Atributos obligatorios cuando hay amount
       script.setAttribute('data-bold-button', 'dark-L');
@@ -1069,14 +1104,18 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
             const hasPrice = priceToUse > 0;
             const shouldShowNormalButton = !boldHash || !boldOrderId || isHotel || !hasPrice;
             
-            console.log('🔍 Estado del botón:', {
+            console.log('🎯 [BOLD BUTTON RENDER]', {
               boldHash: !!boldHash,
+              boldHashLength: boldHash?.length,
               boldOrderId: !!boldOrderId,
+              boldOrderIdValue: boldOrderId,
               isHotel,
               hasPrice,
               priceToUse,
               shouldShowNormalButton,
-              isSubmitting
+              isSubmitting,
+              willShowBold: !shouldShowNormalButton,
+              boldButtonRefExists: !!boldButtonRef.current
             });
             
             if (shouldShowNormalButton) {
@@ -1169,7 +1208,16 @@ export default function Summary({ data, serviceName, serviceImage, serviceId, on
               );
             } else {
               // Mostrar contenedor para botón de Bold cuando hay precio
-              return <div className="w-full" ref={boldButtonRef}></div>;
+              console.log('✅ [BOLD BUTTON RENDER] Renderizando div para botón de Bold');
+              return (
+                <div 
+                  className="w-full min-h-[60px] flex items-center justify-center" 
+                  ref={boldButtonRef}
+                  style={{ minHeight: '60px' }}
+                >
+                  {/* El botón se creará dinámicamente aquí */}
+                </div>
+              );
             }
           })()}
         </div>

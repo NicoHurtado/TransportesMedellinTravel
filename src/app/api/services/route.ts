@@ -102,15 +102,43 @@ export async function GET(request: Request) {
       
       // Si no hay hotelId o si la búsqueda con hotelId falló, obtener todos los servicios activos
       if (servicios.length === 0) {
+        console.log('🔍 No hay hotelId o servicios vacíos, obteniendo todos los servicios activos...');
         try {
-          servicios = await prisma.servicio.findMany({
+          // Primero intentar contar cuántos servicios hay en total
+          const totalServicios = await prisma.servicio.count({
             where: {
               activo: true,
             },
-            orderBy: {
-              ordenDisplay: 'asc',
-            },
-          });
+          }).catch(() => 0);
+          
+          console.log(`📊 Total de servicios activos en BD: ${totalServicios}`);
+          
+          // Si hay servicios pero no los encontramos, intentar sin filtro de activo
+          if (totalServicios === 0) {
+            const totalSinFiltro = await prisma.servicio.count().catch(() => 0);
+            console.log(`📊 Total de servicios (sin filtro activo): ${totalSinFiltro}`);
+            
+            if (totalSinFiltro > 0) {
+              // Hay servicios pero no están marcados como activos
+              servicios = await prisma.servicio.findMany({
+                orderBy: {
+                  ordenDisplay: 'asc',
+                },
+              }).catch(() => []);
+              console.log(`⚠️ Obteniendo servicios sin filtro de activo: ${servicios.length}`);
+            }
+          } else {
+            // Hay servicios activos, obtenerlos
+            servicios = await prisma.servicio.findMany({
+              where: {
+                activo: true,
+              },
+              orderBy: {
+                ordenDisplay: 'asc',
+              },
+            });
+            console.log(`✅ Servicios obtenidos con filtro activo: ${servicios.length}`);
+          }
         } catch (error) {
           console.error('❌ Error al obtener servicios con orderBy:', error);
           // Intentar sin orderBy si falla
@@ -120,9 +148,17 @@ export async function GET(request: Request) {
                 activo: true,
               },
             });
+            console.log(`✅ Servicios obtenidos sin orderBy: ${servicios.length}`);
           } catch (fallbackError) {
             console.error('❌ Error en fallback de servicios:', fallbackError);
-            servicios = [];
+            // Último intento: obtener todos sin ningún filtro
+            try {
+              servicios = await prisma.servicio.findMany().catch(() => []);
+              console.log(`⚠️ Servicios obtenidos sin filtros: ${servicios.length}`);
+            } catch (finalError) {
+              console.error('❌ Error final al obtener servicios:', finalError);
+              servicios = [];
+            }
           }
         }
       }
@@ -261,6 +297,17 @@ export async function GET(request: Request) {
     };
 
     console.log(`✅ Respuesta preparada: ${responseData.servicios.length} servicios, ${responseData.vehiculos.length} vehículos`);
+    
+    // Log detallado en producción para debugging
+    if (process.env.NODE_ENV === 'production') {
+      console.log('📋 Detalles de respuesta:', {
+        serviciosCount: responseData.servicios.length,
+        vehiculosCount: responseData.vehiculos.length,
+        serviciosCodigos: responseData.servicios.map((s: any) => s.codigo),
+        hasDatabaseUrl: !!process.env.DATABASE_URL,
+        nodeEnv: process.env.NODE_ENV,
+      });
+    }
 
     return NextResponse.json({
       success: true,
